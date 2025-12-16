@@ -8,7 +8,24 @@
   <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body class="bg-slate-900 min-h-screen flex flex-col items-center py-6">
+  <!-- Start Screen Modal -->
+  <div id="start-modal" class="fixed inset-0 bg-black bg-opacity-80 flex flex-col items-center justify-center z-50">
+    <h2 class="text-4xl text-cyan-300 mb-6 font-bold">2D City Builder</h2>
+    <button id="start-btn" class="px-8 py-4 bg-cyan-500 text-white text-2xl rounded-xl hover:bg-cyan-400 transition">Start Game</button>
+  </div>
+  <a href="../index.html" class="mb-4 px-4 py-2 rounded-lg bg-cyan-700 text-white font-semibold hover:bg-cyan-500 transition">&larr; Back to Game Hub</a>
   <h1 class="text-3xl font-bold text-cyan-400 mb-4 drop-shadow">2D City Building Game</h1>
+  <div class="flex gap-8 mb-4">
+    <div class="text-yellow-300 font-bold">🪙 Coins: <span id="coins">10</span></div>
+    <div class="text-cyan-200">🏠 Houses: <span id="count-house">0</span></div>
+    <div class="text-cyan-200">🏢 Offices: <span id="count-office">0</span></div>
+    <div class="text-cyan-200">🌳 Parks: <span id="count-park">0</span></div>
+    <div class="text-cyan-200">🏪 Shops: <span id="count-shop">0</span></div>
+    <div class="text-cyan-200">🏫 Schools: <span id="count-school">0</span></div>
+    <div class="text-cyan-200">🏥 Hospitals: <span id="count-hospital">0</span></div>
+    <div class="text-cyan-200">🌲 Trees: <span id="count-tree">0</span></div>
+    <div class="text-cyan-200">🐄 Animals: <span id="count-animal">0</span></div>
+  </div>
   <div id="toolbar" class="flex gap-4 mb-4">
     <button class="btn-building flex flex-col items-center px-4 py-2 rounded-lg bg-slate-800 text-cyan-300 border-2 border-cyan-400 hover:bg-cyan-400 hover:text-slate-900 transition" data-type="house">
       <span class="text-2xl">🏠</span>
@@ -22,16 +39,31 @@
       <span class="text-2xl">🌳</span>
       <span class="text-xs">Park</span>
     </button>
+    <button class="btn-building flex flex-col items-center px-4 py-2 rounded-lg bg-slate-800 text-yellow-300 border-2 border-yellow-400 hover:bg-yellow-400 hover:text-slate-900 transition" data-type="shop">
+      <span class="text-2xl">🏪</span>
+      <span class="text-xs">Shop</span>
+    </button>
+    <button class="btn-building flex flex-col items-center px-4 py-2 rounded-lg bg-slate-800 text-green-300 border-2 border-green-400 hover:bg-green-400 hover:text-slate-900 transition" data-type="school">
+      <span class="text-2xl">🏫</span>
+      <span class="text-xs">School</span>
+    </button>
+    <button class="btn-building flex flex-col items-center px-4 py-2 rounded-lg bg-slate-800 text-pink-300 border-2 border-pink-400 hover:bg-pink-400 hover:text-slate-900 transition" data-type="hospital">
+      <span class="text-2xl">🏥</span>
+      <span class="text-xs">Hospital</span>
+    </button>
+    <button class="btn-building flex flex-col items-center px-4 py-2 rounded-lg bg-slate-800 text-green-400 border-2 border-green-400 hover:bg-green-400 hover:text-slate-900 transition" data-type="tree">
+      <span class="text-2xl">🌲</span>
+      <span class="text-xs">Tree</span>
+    </button>
+    <button class="btn-building flex flex-col items-center px-4 py-2 rounded-lg bg-slate-800 text-lime-400 border-2 border-lime-400 hover:bg-lime-400 hover:text-slate-900 transition" data-type="animal">
+      <span class="text-2xl">🐄</span>
+      <span class="text-xs">Animal</span>
+    </button>
     <button class="btn-building flex flex-col items-center px-4 py-2 rounded-lg bg-slate-800 text-pink-300 border-2 border-pink-400 hover:bg-pink-400 hover:text-slate-900 transition" data-type="clear">
       <span class="text-2xl">❌</span>
       <span class="text-xs">Clear</span>
     </button>
     <button id="resetBtn" class="ml-6 px-4 py-2 rounded-lg bg-red-600 text-white font-semibold hover:bg-red-700 transition">Reset</button>
-  </div>
-  <div class="flex gap-8 mb-4">
-    <div class="text-cyan-200">🏠 Houses: <span id="count-house">0</span></div>
-    <div class="text-cyan-200">🏢 Offices: <span id="count-office">0</span></div>
-    <div class="text-cyan-200">🌳 Parks: <span id="count-park">0</span></div>
   </div>
   <div class="overflow-auto rounded-lg shadow-lg border-4 border-cyan-400 bg-slate-800">
     <canvas id="gameCanvas" width="480" height="480" class="block"></canvas>
@@ -43,13 +75,40 @@
     const grid = Array.from({length: gridSize}, () => Array(gridSize).fill(null));
     let selectedType = 'house';
     let hoverCell = null;
+    let coins = 10;
+
+    // --- Animal Animation ---
+    let animals = [];
+    function animateAnimals() {
+      animals.forEach(animal => {
+        // Move randomly
+        if (Math.random() < 0.02) {
+          animal.dx = (Math.random() - 0.5) * 0.2;
+          animal.dy = (Math.random() - 0.5) * 0.2;
+        }
+        animal.x = Math.max(0, Math.min(gridSize - 1, animal.x + animal.dx));
+        animal.y = Math.max(0, Math.min(gridSize - 1, animal.y + animal.dy));
+      });
+      drawGrid();
+      requestAnimationFrame(animateAnimals);
+    }
 
     // --- UI Toolbar ---
     document.querySelectorAll('.btn-building').forEach(btn => {
       btn.onclick = () => {
-        document.querySelectorAll('.btn-building').forEach(b => b.classList.remove('ring-4', 'ring-cyan-400', 'ring-pink-400'));
+        document.querySelectorAll('.btn-building').forEach(b => b.classList.remove('ring-4', 'ring-cyan-400', 'ring-pink-400', 'ring-yellow-400', 'ring-green-400', 'ring-lime-400'));
         if (btn.dataset.type === 'clear') {
           btn.classList.add('ring-4', 'ring-pink-400');
+        } else if (btn.dataset.type === 'shop') {
+          btn.classList.add('ring-4', 'ring-yellow-400');
+        } else if (btn.dataset.type === 'school') {
+          btn.classList.add('ring-4', 'ring-green-400');
+        } else if (btn.dataset.type === 'hospital') {
+          btn.classList.add('ring-4', 'ring-pink-400');
+        } else if (btn.dataset.type === 'tree') {
+          btn.classList.add('ring-4', 'ring-green-400');
+        } else if (btn.dataset.type === 'animal') {
+          btn.classList.add('ring-4', 'ring-lime-400');
         } else {
           btn.classList.add('ring-4', 'ring-cyan-400');
         }
@@ -93,13 +152,17 @@
           if (grid[y][x]) drawBuilding(x, y, grid[y][x]);
         }
       }
+      // Draw animals
+      animals.forEach(animal => {
+        ctx.font = '24px serif';
+        ctx.fillText(animal.emoji, animal.x * cellSize + 8, animal.y * cellSize + 32);
+      });
     }
 
     function drawBuilding(x, y, type) {
       const px = x * cellSize;
       const py = y * cellSize;
       if (type === 'house') {
-        // House: blue square with red roof
         ctx.fillStyle = '#38bdf8';
         ctx.fillRect(px + 6, py + 14, 28, 20);
         ctx.fillStyle = '#b91c1c';
@@ -110,7 +173,6 @@
         ctx.closePath();
         ctx.fill();
       } else if (type === 'office') {
-        // Office: gray rectangle with windows
         ctx.fillStyle = '#a9b0b4';
         ctx.fillRect(px + 8, py + 6, 24, 28);
         ctx.fillStyle = '#222';
@@ -118,12 +180,34 @@
           for (let j = 0; j < 2; j++)
             ctx.fillRect(px + 12 + i*7, py + 10 + j*10, 5, 7);
       } else if (type === 'park') {
-        // Park: green circle with a tree trunk
         ctx.fillStyle = '#10b981';
         ctx.beginPath();
         ctx.arc(px + 20, py + 24, 14, 0, 2 * Math.PI);
         ctx.fill();
         ctx.fillStyle = '#8b4513';
+        ctx.fillRect(px + 17, py + 30, 6, 8);
+      } else if (type === 'shop') {
+        ctx.fillStyle = '#fde047';
+        ctx.fillRect(px + 8, py + 18, 24, 16);
+        ctx.fillStyle = '#b91c1c';
+        ctx.fillRect(px + 8, py + 14, 24, 6);
+      } else if (type === 'school') {
+        ctx.fillStyle = '#22d3ee';
+        ctx.fillRect(px + 8, py + 10, 24, 24);
+        ctx.fillStyle = '#facc15';
+        ctx.fillRect(px + 16, py + 10, 8, 8);
+      } else if (type === 'hospital') {
+        ctx.fillStyle = '#f472b6';
+        ctx.fillRect(px + 10, py + 12, 20, 24);
+        ctx.fillStyle = '#fff';
+        ctx.fillRect(px + 18, py + 18, 4, 12);
+        ctx.fillRect(px + 14, py + 22, 12, 4);
+      } else if (type === 'tree') {
+        ctx.fillStyle = '#166534';
+        ctx.beginPath();
+        ctx.arc(px + 20, py + 24, 14, 0, 2 * Math.PI);
+        ctx.fill();
+        ctx.fillStyle = '#8b5e3c';
         ctx.fillRect(px + 17, py + 30, 6, 8);
       }
     }
@@ -150,26 +234,69 @@
       if (!hoverCell) return;
       const {x, y} = hoverCell;
       if (selectedType === 'clear') {
+        // Remove animal if present
+        animals = animals.filter(a => !(Math.floor(a.x) === x && Math.floor(a.y) === y));
+        if (grid[y][x] === 'tree') {
+          coins += 2; // Cutting tree gives coins
+          playSound('tree');
+        }
+        if (grid[y][x] === 'animal') {
+          coins += 3; // Hunting animal gives coins
+          playSound('animal');
+        }
         grid[y][x] = null;
+        playSound('remove');
+      } else if (selectedType === 'animal') {
+        if (coins >= 3 && !animals.some(a => Math.floor(a.x) === x && Math.floor(a.y) === y)) {
+          animals.push({x, y, emoji: Math.random() > 0.5 ? '🐄' : '🐕', dx: 0, dy: 0});
+          coins -= 3;
+          playSound('animal');
+        }
+      } else if (selectedType === 'tree') {
+        if (coins >= 1 && !grid[y][x]) {
+          grid[y][x] = 'tree';
+          coins -= 1;
+          playSound('tree');
+        }
       } else {
-        grid[y][x] = selectedType;
+        // Place building if enough coins
+        const cost = {house: 2, office: 3, park: 2, shop: 4, school: 5, hospital: 6}[selectedType] || 1;
+        if (coins >= cost && !grid[y][x]) {
+          grid[y][x] = selectedType;
+          coins -= cost;
+          playSound('build');
+        }
       }
       updateCounts();
       drawGrid();
+      updateCoins();
     });
 
     // --- Building Counts ---
     function updateCounts() {
-      let house = 0, office = 0, park = 0;
+      let house = 0, office = 0, park = 0, shop = 0, school = 0, hospital = 0, tree = 0;
       for (let y = 0; y < gridSize; y++)
         for (let x = 0; x < gridSize; x++) {
           if (grid[y][x] === 'house') house++;
           if (grid[y][x] === 'office') office++;
           if (grid[y][x] === 'park') park++;
+          if (grid[y][x] === 'shop') shop++;
+          if (grid[y][x] === 'school') school++;
+          if (grid[y][x] === 'hospital') hospital++;
+          if (grid[y][x] === 'tree') tree++;
         }
       document.getElementById('count-house').textContent = house;
       document.getElementById('count-office').textContent = office;
       document.getElementById('count-park').textContent = park;
+      document.getElementById('count-shop').textContent = shop;
+      document.getElementById('count-school').textContent = school;
+      document.getElementById('count-hospital').textContent = hospital;
+      document.getElementById('count-tree').textContent = tree;
+      document.getElementById('count-animal').textContent = animals.length;
+    }
+
+    function updateCoins() {
+      document.getElementById('coins').textContent = coins;
     }
 
     // --- Reset Button ---
@@ -177,11 +304,14 @@
       for (let y = 0; y < gridSize; y++)
         for (let x = 0; x < gridSize; x++)
           grid[y][x] = null;
+      animals = [];
+      coins = 10;
       updateCounts();
+      updateCoins();
       drawGrid();
     };
 
-    // --- Responsive Canvas (optional) ---
+    // --- Responsive Canvas ---
     function resizeCanvas() {
       const size = Math.min(window.innerWidth - 32, 480);
       canvas.width = size;
@@ -189,8 +319,33 @@
       drawGrid();
     }
     window.addEventListener('resize', resizeCanvas);
+
+    // --- Sound Effects ---
+    function playSound(type) {
+      let url = '';
+      if (type === 'build') url = 'https://cdn.pixabay.com/audio/2022/03/15/audio_115b9e3e2d.mp3';
+      if (type === 'remove') url = 'https://cdn.pixabay.com/audio/2022/03/15/audio_115b9e3e2d.mp3';
+      if (type === 'animal') url = 'https://cdn.pixabay.com/audio/2022/10/16/audio_12e3b1c2e2.mp3';
+      if (type === 'tree') url = 'https://cdn.pixabay.com/audio/2022/03/15/audio_115b9e3e2d.mp3';
+      if (url) {
+        const audio = new Audio(url);
+        audio.volume = 0.2;
+        audio.play();
+      }
+    }
+
+    // --- Start Screen Modal ---
+    document.getElementById('start-btn').onclick = () => {
+      document.getElementById('start-modal').style.display = 'none';
+      resizeCanvas();
+      updateCounts();
+      updateCoins();
+      animateAnimals();
+    };
+
     // --- Initial Draw ---
     updateCounts();
+    updateCoins();
     resizeCanvas();
   </script>
 </body>

@@ -1,54 +1,18 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-	<meta charset="UTF-8">
-	<meta name="viewport" content="width=device-width, initial-scale=1.0">
-	<title>Game Hub</title>
-	<style>
-		body {
-			background: #181f2a;
-			color: #fff;
-			font-family: 'Segoe UI', Arial, sans-serif;
-			margin: 0;
-			min-height: 100vh;
-			display: flex;
-			flex-direction: column;
-			align-items: center;
-			justify-content: center;
-		}
-		h1 {
-			margin-bottom: 2rem;
-			font-size: 2.5rem;
-			letter-spacing: 2px;
-		}
-		.game-links {
-			display: flex;
-			flex-direction: column;
-			gap: 1.5rem;
-		}
-		a {
-			background: #26352c;
-			color: #4cffc8;
-			text-decoration: none;
-			padding: 1rem 2.5rem;
-			border-radius: 1rem;
-			font-size: 1.3rem;
-			font-weight: 600;
-			box-shadow: 0 2px 12px #0006;
-			transition: background 0.2s, color 0.2s, transform 0.2s;
-		}
-		a:hover {
-			background: #4cffc8;
-			color: #181f2a;
-			transform: scale(1.05);
-		}
-	</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Game Hub</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body>
-	<h1>Game Hub</h1>
-	<div class="game-links">
-		<a href="games/car_racing.html">3D Rally Racer</a>
-		<a href="games/shooting.html">3D Shooting Game</a>
-	</div>
+<body class="bg-slate-900 min-h-screen flex flex-col items-center justify-center">
+    <h1 class="text-4xl font-bold text-cyan-400 mb-10 drop-shadow">Game Hub</h1>
+    <div class="flex flex-col gap-6 w-full max-w-xs">
+        <a href="games/car_racing.html" class="bg-slate-800 text-cyan-300 border-2 border-cyan-400 rounded-xl px-8 py-5 text-xl font-semibold text-center shadow-lg hover:bg-cyan-400 hover:text-slate-900 transition">3D Rally Racer</a>
+        <a href="games/shooting.html" class="bg-slate-800 text-cyan-300 border-2 border-cyan-400 rounded-xl px-8 py-5 text-xl font-semibold text-center shadow-lg hover:bg-cyan-400 hover:text-slate-900 transition">3D Shooting Game</a>
+        <a href="games/cities_building.html" class="bg-slate-800 text-cyan-300 border-2 border-cyan-400 rounded-xl px-8 py-5 text-xl font-semibold text-center shadow-lg hover:bg-cyan-400 hover:text-slate-900 transition">2D City Building Game</a>
+    </div>
 </body>
 </html>
