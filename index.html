@@ -3,16 +3,40 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Game Hub</title>
+    <title>Game Store</title>
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body class="bg-slate-900 min-h-screen flex flex-col items-center justify-center">
-    <h1 class="text-4xl font-bold text-cyan-400 mb-10 drop-shadow">Game Hub</h1>
-    <div class="flex flex-col gap-6 w-full max-w-xs">
-        <a href="games/car_racing.html" class="bg-slate-800 text-cyan-300 border-2 border-cyan-400 rounded-xl px-8 py-5 text-xl font-semibold text-center shadow-lg hover:bg-cyan-400 hover:text-slate-900 transition">3D Rally Racer</a>
-        <a href="games/shooting.html" class="bg-slate-800 text-cyan-300 border-2 border-cyan-400 rounded-xl px-8 py-5 text-xl font-semibold text-center shadow-lg hover:bg-cyan-400 hover:text-slate-900 transition">3D Shooting Game</a>
-        <a href="games/cities_building.html" class="bg-slate-800 text-cyan-300 border-2 border-cyan-400 rounded-xl px-8 py-5 text-xl font-semibold text-center shadow-lg hover:bg-cyan-400 hover:text-slate-900 transition">City Building Game</a>
-    </div>
+<body class="bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 min-h-screen flex flex-col items-center py-10">
+    <header class="mb-10 w-full max-w-2xl flex flex-col items-center">
+        <h1 class="text-5xl font-extrabold text-cyan-400 drop-shadow mb-2">Game Store</h1>
+        <p class="text-slate-300 text-lg">Discover and play 3D browser games</p>
+    </header>
+    <main class="w-full max-w-2xl grid grid-cols-1 md:grid-cols-2 gap-8">
+        <!-- Game Card 1 -->
+        <div class="bg-slate-800 rounded-2xl shadow-xl border-2 border-cyan-400 flex flex-col items-center p-6 hover:scale-105 transition">
+            <div class="text-5xl mb-3">🏎️</div>
+            <h2 class="text-2xl font-bold text-cyan-300 mb-1">3D Rally Racer</h2>
+            <p class="text-slate-300 mb-4 text-center">Race against AI on a stylized 3D track. Realistic physics, mini-map, and sound!</p>
+            <a href="games/car_racing.html" class="mt-auto px-6 py-2 bg-cyan-500 text-white font-semibold rounded-lg shadow hover:bg-cyan-400 transition">Play Now</a>
+        </div>
+        <!-- Game Card 2 -->
+        <div class="bg-slate-800 rounded-2xl shadow-xl border-2 border-cyan-400 flex flex-col items-center p-6 hover:scale-105 transition">
+            <div class="text-5xl mb-3">🎯</div>
+            <h2 class="text-2xl font-bold text-cyan-300 mb-1">3D Shooting Game</h2>
+            <p class="text-slate-300 mb-4 text-center">Test your aim! Shoot moving targets in a 3D arena. Fast-paced and fun.</p>
+            <a href="games/shooting.html" class="mt-auto px-6 py-2 bg-cyan-500 text-white font-semibold rounded-lg shadow hover:bg-cyan-400 transition">Play Now</a>
+        </div>
+        <!-- Game Card 3 -->
+        <div class="bg-slate-800 rounded-2xl shadow-xl border-2 border-cyan-400 flex flex-col items-center p-6 hover:scale-105 transition md:col-span-2">
+            <div class="text-5xl mb-3">🏙️</div>
+            <h2 class="text-2xl font-bold text-cyan-300 mb-1">City Building Game</h2>
+            <p class="text-slate-300 mb-4 text-center">Build your own 3D city! Place houses, shops, trees, and animals. Earn money and expand.</p>
+            <a href="games/cities_building.html" class="mt-auto px-6 py-2 bg-cyan-500 text-white font-semibold rounded-lg shadow hover:bg-cyan-400 transition">Play Now</a>
+        </div>
+    </main>
+    <footer class="mt-16 text-slate-500 text-sm text-center">
+        &copy; 2025 Game Store &mdash; Powered by Three.js & Tailwind CSS
+    </footer>
 </body>
 </html>
