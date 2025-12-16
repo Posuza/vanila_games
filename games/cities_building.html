@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>2D City Building Game</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-900 min-h-screen flex flex-col items-center py-6">
+  <h1 class="text-3xl font-bold text-cyan-400 mb-4 drop-shadow">2D City Building Game</h1>
+  <div id="toolbar" class="flex gap-4 mb-4">
+    <button class="btn-building flex flex-col items-center px-4 py-2 rounded-lg bg-slate-800 text-cyan-300 border-2 border-cyan-400 hover:bg-cyan-400 hover:text-slate-900 transition" data-type="house">
+      <span class="text-2xl">🏠</span>
+      <span class="text-xs">House</span>
+    </button>
+    <button class="btn-building flex flex-col items-center px-4 py-2 rounded-lg bg-slate-800 text-cyan-300 border-2 border-cyan-400 hover:bg-cyan-400 hover:text-slate-900 transition" data-type="office">
+      <span class="text-2xl">🏢</span>
+      <span class="text-xs">Office</span>
+    </button>
+    <button class="btn-building flex flex-col items-center px-4 py-2 rounded-lg bg-slate-800 text-cyan-300 border-2 border-cyan-400 hover:bg-cyan-400 hover:text-slate-900 transition" data-type="park">
+      <span class="text-2xl">🌳</span>
+      <span class="text-xs">Park</span>
+    </button>
+    <button class="btn-building flex flex-col items-center px-4 py-2 rounded-lg bg-slate-800 text-pink-300 border-2 border-pink-400 hover:bg-pink-400 hover:text-slate-900 transition" data-type="clear">
+      <span class="text-2xl">❌</span>
+      <span class="text-xs">Clear</span>
+    </button>
+    <button id="resetBtn" class="ml-6 px-4 py-2 rounded-lg bg-red-600 text-white font-semibold hover:bg-red-700 transition">Reset</button>
+  </div>
+  <div class="flex gap-8 mb-4">
+    <div class="text-cyan-200">🏠 Houses: <span id="count-house">0</span></div>
+    <div class="text-cyan-200">🏢 Offices: <span id="count-office">0</span></div>
+    <div class="text-cyan-200">🌳 Parks: <span id="count-park">0</span></div>
+  </div>
+  <div class="overflow-auto rounded-lg shadow-lg border-4 border-cyan-400 bg-slate-800">
+    <canvas id="gameCanvas" width="480" height="480" class="block"></canvas>
+  </div>
+  <script>
+    // --- Game Config ---
+    const gridSize = 12;
+    const cellSize = 40;
+    const grid = Array.from({length: gridSize}, () => Array(gridSize).fill(null));
+    let selectedType = 'house';
+    let hoverCell = null;
+
+    // --- UI Toolbar ---
+    document.querySelectorAll('.btn-building').forEach(btn => {
+      btn.onclick = () => {
+        document.querySelectorAll('.btn-building').forEach(b => b.classList.remove('ring-4', 'ring-cyan-400', 'ring-pink-400'));
+        if (btn.dataset.type === 'clear') {
+          btn.classList.add('ring-4', 'ring-pink-400');
+        } else {
+          btn.classList.add('ring-4', 'ring-cyan-400');
+        }
+        selectedType = btn.dataset.type;
+      };
+    });
+    // Set initial selection
+    document.querySelector('.btn-building[data-type="house"]').classList.add('ring-4', 'ring-cyan-400');
+
+    // --- Canvas Setup ---
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+
+    // --- Drawing Functions ---
+    function drawGrid() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      // Draw grid lines
+      ctx.strokeStyle = '#4cffc8';
+      ctx.lineWidth = 1;
+      for (let i = 0; i <= gridSize; i++) {
+        ctx.beginPath();
+        ctx.moveTo(i * cellSize, 0);
+        ctx.lineTo(i * cellSize, gridSize * cellSize);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(0, i * cellSize);
+        ctx.lineTo(gridSize * cellSize, i * cellSize);
+        ctx.stroke();
+      }
+      // Draw hover highlight
+      if (hoverCell) {
+        ctx.save();
+        ctx.globalAlpha = 0.3;
+        ctx.fillStyle = selectedType === 'clear' ? '#f87171' : '#4cffc8';
+        ctx.fillRect(hoverCell.x * cellSize, hoverCell.y * cellSize, cellSize, cellSize);
+        ctx.restore();
+      }
+      // Draw buildings
+      for (let y = 0; y < gridSize; y++) {
+        for (let x = 0; x < gridSize; x++) {
+          if (grid[y][x]) drawBuilding(x, y, grid[y][x]);
+        }
+      }
+    }
+
+    function drawBuilding(x, y, type) {
+      const px = x * cellSize;
+      const py = y * cellSize;
+      if (type === 'house') {
+        // House: blue square with red roof
+        ctx.fillStyle = '#38bdf8';
+        ctx.fillRect(px + 6, py + 14, 28, 20);
+        ctx.fillStyle = '#b91c1c';
+        ctx.beginPath();
+        ctx.moveTo(px + 6, py + 14);
+        ctx.lineTo(px + 20, py + 2);
+        ctx.lineTo(px + 34, py + 14);
+        ctx.closePath();
+        ctx.fill();
+      } else if (type === 'office') {
+        // Office: gray rectangle with windows
+        ctx.fillStyle = '#a9b0b4';
+        ctx.fillRect(px + 8, py + 6, 24, 28);
+        ctx.fillStyle = '#222';
+        for (let i = 0; i < 3; i++)
+          for (let j = 0; j < 2; j++)
+            ctx.fillRect(px + 12 + i*7, py + 10 + j*10, 5, 7);
+      } else if (type === 'park') {
+        // Park: green circle with a tree trunk
+        ctx.fillStyle = '#10b981';
+        ctx.beginPath();
+        ctx.arc(px + 20, py + 24, 14, 0, 2 * Math.PI);
+        ctx.fill();
+        ctx.fillStyle = '#8b4513';
+        ctx.fillRect(px + 17, py + 30, 6, 8);
+      }
+    }
+
+    // --- Mouse Events ---
+    canvas.addEventListener('mousemove', e => {
+      const rect = canvas.getBoundingClientRect();
+      const mx = e.clientX - rect.left;
+      const my = e.clientY - rect.top;
+      const x = Math.floor(mx / cellSize);
+      const y = Math.floor(my / cellSize);
+      if (x >= 0 && x < gridSize && y >= 0 && y < gridSize) {
+        hoverCell = {x, y};
+      } else {
+        hoverCell = null;
+      }
+      drawGrid();
+    });
+    canvas.addEventListener('mouseleave', () => {
+      hoverCell = null;
+      drawGrid();
+    });
+    canvas.addEventListener('click', e => {
+      if (!hoverCell) return;
+      const {x, y} = hoverCell;
+      if (selectedType === 'clear') {
+        grid[y][x] = null;
+      } else {
+        grid[y][x] = selectedType;
+      }
+      updateCounts();
+      drawGrid();
+    });
+
+    // --- Building Counts ---
+    function updateCounts() {
+      let house = 0, office = 0, park = 0;
+      for (let y = 0; y < gridSize; y++)
+        for (let x = 0; x < gridSize; x++) {
+          if (grid[y][x] === 'house') house++;
+          if (grid[y][x] === 'office') office++;
+          if (grid[y][x] === 'park') park++;
+        }
+      document.getElementById('count-house').textContent = house;
+      document.getElementById('count-office').textContent = office;
+      document.getElementById('count-park').textContent = park;
+    }
+
+    // --- Reset Button ---
+    document.getElementById('resetBtn').onclick = () => {
+      for (let y = 0; y < gridSize; y++)
+        for (let x = 0; x < gridSize; x++)
+          grid[y][x] = null;
+      updateCounts();
+      drawGrid();
+    };
+
+    // --- Responsive Canvas (optional) ---
+    function resizeCanvas() {
+      const size = Math.min(window.innerWidth - 32, 480);
+      canvas.width = size;
+      canvas.height = size;
+      drawGrid();
+    }
+    window.addEventListener('resize', resizeCanvas);
+    // --- Initial Draw ---
+    updateCounts();
+    resizeCanvas();
+  </script>
+</body>
+</html>
