@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Multiplayer Card Game</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 min-h-screen flex flex-col items-center py-10">
+  <a href="../index.html" class="mb-6 px-4 py-2 rounded-lg bg-cyan-700 text-white font-semibold hover:bg-cyan-500 transition">&larr; Back to Game Hub</a>
+  <h1 class="text-3xl font-bold text-cyan-400 mb-4 drop-shadow">Multiplayer Card Game</h1>
+  <div class="mb-6 flex flex-col items-center">
+    <div class="flex items-center mb-2">
+      <label class="text-slate-200 font-semibold mr-2">Number of Players:</label>
+      <select id="playerCount" class="px-3 py-2 rounded bg-slate-800 text-cyan-300 border-2 border-cyan-400">
+        <option value="2">2</option>
+        <option value="3">3</option>
+        <option value="4" selected>4</option>
+        <option value="5">5</option>
+      </select>
+      <button id="startBtn" class="ml-4 px-6 py-2 bg-cyan-500 text-white font-semibold rounded-lg shadow hover:bg-cyan-400 transition">Start Game</button>
+    </div>
+    <div class="flex items-center gap-2">
+      <label class="text-slate-200 font-semibold">Your Avatar:</label>
+      <img id="userAvatar" src="" alt="Your Avatar" class="w-10 h-10 rounded-full border-2 border-cyan-400 bg-white object-cover">
+      <input id="avatarInput" type="file" accept="image/*" class="hidden">
+      <button id="changeAvatarBtn" class="px-2 py-1 bg-slate-700 text-cyan-200 rounded hover:bg-cyan-600 text-xs">Change</button>
+    </div>
+  </div>
+  <div class="relative w-full max-w-2xl flex flex-col items-center">
+    <!-- Table image -->
+    <img src="https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=600&q=80"
+         alt="Table" class="w-full max-w-2xl rounded-2xl shadow-lg mb-4 border-4 border-cyan-800 object-cover" style="height:180px;object-position:center;">
+    <div id="gameArea" class="w-full flex flex-col items-center"></div>
+  </div>
+  <script>
+    // --- Card Game Logic with Avatars and Table Image ---
+    const suits = ['♠', '♥', '♦', '♣'];
+    const ranks = [
+      {name: 'A', value: 14}, {name: 'K', value: 13}, {name: 'Q', value: 12}, {name: 'J', value: 11},
+      {name: '10', value: 10}, {name: '9', value: 9}, {name: '8', value: 8}, {name: '7', value: 7},
+      {name: '6', value: 6}, {name: '5', value: 5}, {name: '4', value: 4}, {name: '3', value: 3}, {name: '2', value: 2}
+    ];
+    const aiNames = [
+      "Alex", "Sam", "Jordan", "Taylor", "Morgan", "Casey", "Riley", "Jamie", "Drew", "Skyler"
+    ];
+    // Some random avatar images (Unsplash avatars, can be replaced)
+    const aiAvatars = [
+      "https://randomuser.me/api/portraits/men/32.jpg",
+      "https://randomuser.me/api/portraits/women/44.jpg",
+      "https://randomuser.me/api/portraits/men/65.jpg",
+      "https://randomuser.me/api/portraits/women/68.jpg",
+      "https://randomuser.me/api/portraits/men/12.jpg",
+      "https://randomuser.me/api/portraits/women/21.jpg",
+      "https://randomuser.me/api/portraits/men/77.jpg",
+      "https://randomuser.me/api/portraits/women/82.jpg",
+      "https://randomuser.me/api/portraits/men/23.jpg",
+      "https://randomuser.me/api/portraits/women/36.jpg"
+    ];
+    const START_MONEY = 100;
+    let playerStates = [];
+    let userAvatar = localStorage.getItem('userAvatar') || "https://randomuser.me/api/portraits/men/1.jpg";
+
+    // --- Avatar UI Logic ---
+    const userAvatarImg = document.getElementById('userAvatar');
+    const avatarInput = document.getElementById('avatarInput');
+    const changeAvatarBtn = document.getElementById('changeAvatarBtn');
+    function updateUserAvatarUI() {
+      userAvatarImg.src = userAvatar;
+    }
+    updateUserAvatarUI();
+    changeAvatarBtn.onclick = () => avatarInput.click();
+    avatarInput.onchange = (e) => {
+      const file = e.target.files[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = function(evt) {
+          userAvatar = evt.target.result;
+          localStorage.setItem('userAvatar', userAvatar);
+          updateUserAvatarUI();
+        };
+        reader.readAsDataURL(file);
+      }
+    };
+
+    function getRandomCard() {
+      const suit = suits[Math.floor(Math.random() * suits.length)];
+      const rank = ranks[Math.floor(Math.random() * ranks.length)];
+      return { suit, rank };
+    }
+
+    function renderCard(card) {
+      const imgUrl = getCardImage(card);
+      return `<img src="${imgUrl}" alt="${card.rank.name}${card.suit}" class="w-20 h-28 rounded-xl border-2 border-cyan-400 shadow-lg mx-2 bg-white">`;
+    }
+
+    function getAIName(idx) {
+      return aiNames[idx % aiNames.length];
+    }
+    function getAIAvatar(idx) {
+      return aiAvatars[idx % aiAvatars.length];
+    }
+
+    function resetPlayers(playerCount) {
+      playerStates = [];
+      for (let i = 0; i < playerCount; i++) {
+        playerStates.push({
+          name: i === 0 ? "You" : getAIName(i),
+          money: START_MONEY,
+          inGame: true,
+          avatar: i === 0 ? userAvatar : getAIAvatar(i)
+        });
+      }
+    }
+
+    function startGame() {
+      const playerCount = parseInt(document.getElementById('playerCount').value, 10);
+      if (playerStates.length !== playerCount) resetPlayers(playerCount);
+
+      // Only players with money can play
+      const activePlayers = playerStates.filter(p => p.money > 0);
+      if (activePlayers.length < 2) {
+        document.getElementById('gameArea').innerHTML = `<div class="text-2xl text-red-400 mb-4">Game Over! Not enough players with money.</div>`;
+        return;
+      }
+
+      // Ask user for bet
+      let betHtml = `<div class="mb-4 text-cyan-200 font-semibold">Your Money: $${playerStates[0].money}</div>
+        <label class="text-slate-200 font-semibold mr-2">Your Bet:</label>
+        <input id="userBet" type="number" min="1" max="${playerStates[0].money}" value="10" class="px-3 py-2 rounded bg-slate-800 text-cyan-300 border-2 border-cyan-400 w-24">
+        <button id="betBtn" class="ml-4 px-6 py-2 bg-cyan-500 text-white font-semibold rounded-lg shadow hover:bg-cyan-400 transition">Place Bet</button>`;
+      document.getElementById('gameArea').innerHTML = betHtml;
+
+      document.getElementById('betBtn').onclick = () => {
+        let userBet = parseInt(document.getElementById('userBet').value, 10);
+        if (isNaN(userBet) || userBet < 1 || userBet > playerStates[0].money) {
+          alert("Invalid bet!");
+          return;
+        }
+
+        // AI bets randomly (between 1 and their money)
+        let bets = [userBet];
+        for (let i = 1; i < playerStates.length; i++) {
+          if (playerStates[i].money > 0) {
+            bets[i] = Math.floor(Math.random() * Math.min(20, playerStates[i].money)) + 1;
+          } else {
+            bets[i] = 0;
+          }
+        }
+
+        playRound(bets);
+      };
+    }
+
+    function playRound(bets) {
+      let players = [];
+      let maxVal = -1;
+      let winners = [];
+      let pot = 0;
+
+      // Deal cards and collect bets
+      for (let i = 0; i < playerStates.length; i++) {
+        if (playerStates[i].money > 0 && bets[i] > 0) {
+          const card = getRandomCard();
+          players.push({ idx: i, name: playerStates[i].name, card, bet: bets[i], avatar: playerStates[i].avatar });
+          playerStates[i].money -= bets[i];
+          pot += bets[i];
+          if (card.rank.value > maxVal) {
+            maxVal = card.rank.value;
+            winners = [i];
+          } else if (card.rank.value === maxVal) {
+            winners.push(i);
+          }
+        }
+      }
+
+      // Show "thinking" animation for AI
+      let html = `<div class="mb-4 text-cyan-200 font-semibold">Pot: $${pot}</div>
+        <div class="flex flex-wrap justify-center mb-6">`;
+      players.forEach((p, idx) => {
+        html += `<div class="flex flex-col items-center mx-4">
+          <img src="${p.avatar}" alt="${p.name} Avatar" class="w-12 h-12 rounded-full border-2 border-cyan-400 bg-white object-cover mb-2">
+          <div class="mb-2 text-cyan-300 font-semibold">${p.name}</div>
+          <div class="w-20 h-28 bg-slate-700 rounded-xl border-2 border-cyan-400 shadow-lg mx-2 flex items-center justify-center text-slate-400 text-xl font-bold">
+            ${idx === 0 ? renderCard(p.card) : '<span>...</span>'}
+          </div>
+        </div>`;
+      });
+      html += `</div>`;
+      document.getElementById('gameArea').innerHTML = html;
+
+      // Reveal AI cards and show result after a short delay
+      setTimeout(() => {
+        let html = `<div class="mb-4 text-cyan-200 font-semibold">Pot: $${pot}</div>
+          <div class="flex flex-wrap justify-center mb-6">`;
+        players.forEach((p, idx) => {
+          html += `<div class="flex flex-col items-center mx-4">
+            <img src="${p.avatar}" alt="${p.name} Avatar" class="w-12 h-12 rounded-full border-2 border-cyan-400 bg-white object-cover mb-2">
+            <div class="mb-2 text-cyan-300 font-semibold">${p.name}</div>
+            ${renderCard(p.card)}
+          </div>`;
+        });
+        html += `</div>`;
+
+        // Update player states and show winners
+        if (winners.length === 1) {
+          html += `<div class="text-2xl font-bold text-green-400 mb-4">${players[winners[0]].name} wins the pot of $${pot}!</div>`;
+          playerStates[winners[0]].money += pot;
+        } else {
+          html += `<div class="text-2xl font-bold text-yellow-400 mb-4">It's a tie between: ${winners.map(i => players[i].name).join(', ')}</div>`;
+          let splitPot = Math.floor(pot / winners.length);
+          winners.forEach(i => playerStates[i].money += splitPot);
+          html += `<div class="text-cyan-300 mb-4">Each winner receives $${splitPot}</div>`;
+        }
+        html += `<button id="playAgainBtn" class="px-6 py-2 bg-cyan-500 text-white font-semibold rounded-lg shadow hover:bg-cyan-400 transition">Play Again</button>`;
+
+        document.getElementById('gameArea').innerHTML = html;
+        document.getElementById('playAgainBtn').onclick = startGame;
+      }, 1000); // 1 second delay
+    }
+
+    function getCardImage(card) {
+      // card.rank.name: 'A', 'K', 'Q', ..., '2'
+      // card.suit: '♠', '♥', '♦', '♣'
+      const suitMap = {'♠':'S', '♥':'H', '♦':'D', '♣':'C'};
+      const rankMap = {'A':'A', 'K':'K', 'Q':'Q', 'J':'J', '10':'0', '9':'9', '8':'8', '7':'7', '6':'6', '5':'5', '4':'4', '3':'3', '2':'2'};
+      const rank = rankMap[card.rank.name];
+      const suit = suitMap[card.suit];
+      return `https://deckofcardsapi.com/static/img/${rank}${suit}.png`;
+    }
+
+    // On avatar change, update localStorage and UI immediately
+    userAvatarImg.onerror = function() {
+      userAvatarImg.src = "https://randomuser.me/api/portraits/men/1.jpg";
+    };
+
+    // On page load, update avatar and reset players
+    window.onload = function() {
+      updateUserAvatarUI();
+      resetPlayers(parseInt(document.getElementById('playerCount').value, 10));
+    };
+
+    document.getElementById('startBtn').onclick = startGame;
+    document.getElementById('playerCount').onchange = () => {
+      resetPlayers(parseInt(document.getElementById('playerCount').value, 10));
+    };
+  </script>
+</body>
+</html>
