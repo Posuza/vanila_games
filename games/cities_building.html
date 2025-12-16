@@ -8,28 +8,51 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <!-- Three.js CDN -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <!-- OrbitControls -->
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
 </head>
 <body class="bg-slate-900 min-h-screen flex flex-col items-center py-6">
   <a href="../index.html" class="mb-4 px-4 py-2 rounded-lg bg-cyan-700 text-white font-semibold hover:bg-cyan-500 transition">&larr; Back to Game Hub</a>
   <h1 class="text-3xl font-bold text-cyan-400 mb-4 drop-shadow">3D City Building Game</h1>
+  <div class="mb-4 text-yellow-300 font-bold text-lg">💰 Money: <span id="money">10</span></div>
   <div id="toolbar" class="flex gap-4 mb-4">
-    <button class="btn-building px-4 py-2 rounded-lg bg-slate-800 text-cyan-300 border-2 border-cyan-400 hover:bg-cyan-400 hover:text-slate-900 transition" data-type="house">🏠 House</button>
-    <button class="btn-building px-4 py-2 rounded-lg bg-slate-800 text-yellow-300 border-2 border-yellow-400 hover:bg-yellow-400 hover:text-slate-900 transition" data-type="shop">🏪 Shop</button>
-    <button class="btn-building px-4 py-2 rounded-lg bg-slate-800 text-green-400 border-2 border-green-400 hover:bg-green-400 hover:text-slate-900 transition" data-type="tree">🌲 Tree</button>
-    <button class="btn-building px-4 py-2 rounded-lg bg-slate-800 text-lime-400 border-2 border-lime-400 hover:bg-lime-400 hover:text-slate-900 transition" data-type="animal">🐄 Animal</button>
+    <button class="btn-building px-4 py-2 rounded-lg bg-slate-800 text-cyan-300 border-2 border-cyan-400 hover:bg-cyan-400 hover:text-slate-900 transition" data-type="house">🏠 House (5)</button>
+    <button class="btn-building px-4 py-2 rounded-lg bg-slate-800 text-yellow-300 border-2 border-yellow-400 hover:bg-yellow-400 hover:text-slate-900 transition" data-type="shop">🏪 Shop (8)</button>
+    <button class="btn-building px-4 py-2 rounded-lg bg-slate-800 text-green-400 border-2 border-green-400 hover:bg-green-400 hover:text-slate-900 transition" data-type="tree">🌲 Tree (2)</button>
+    <button class="btn-building px-4 py-2 rounded-lg bg-slate-800 text-lime-400 border-2 border-lime-400 hover:bg-lime-400 hover:text-slate-900 transition" data-type="animal">🐄 Animal (3)</button>
     <button class="btn-building px-4 py-2 rounded-lg bg-slate-800 text-pink-300 border-2 border-pink-400 hover:bg-pink-400 hover:text-slate-900 transition" data-type="clear">❌ Clear</button>
   </div>
   <div class="rounded-lg shadow-lg border-4 border-cyan-400 bg-slate-800" style="width: 600px; height: 600px;">
-    <div id="threejs-canvas" style="width: 600px; height: 600px;"></div>
+    <div id="threejs-canvas" style="width: 600px; height: 600px; position:relative;"></div>
+    <div id="action-popup" class="absolute z-10 hidden flex-col items-center justify-center left-1/2 top-1/2" style="transform:translate(-50%,-50%)">
+      <div class="bg-slate-700 p-4 rounded-lg shadow-lg flex flex-col gap-2 items-center">
+        <div id="action-label" class="text-white mb-2"></div>
+        <div class="flex gap-2">
+          <button id="action-confirm" class="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-400"></button>
+          <button id="action-cancel" class="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-400">Cancel</button>
+        </div>
+      </div>
+    </div>
   </div>
   <script>
+    // --- Game State ---
+    let money = 10;
+    const COSTS = { house: 5, shop: 8, tree: 2, animal: 3 };
+    const REWARDS = { tree: 3, animal: 5 };
+
     // --- Three.js Setup ---
     let scene, camera, renderer, raycaster, mouse;
     let gridSize = 10;
     let cellSize = 5;
     let gridObjects = Array.from({length: gridSize}, () => Array(gridSize).fill(null));
+    let gridTypes = Array.from({length: gridSize}, () => Array(gridSize).fill(null));
     let selectedType = 'house';
     let animalMeshes = [];
+    let animalGrid = [];
+    let treeGrid = [];
+    let selectedCell = null;
+    let selectedMesh = null;
+    let popupType = null;
 
     // Scene
     scene = new THREE.Scene();
@@ -37,13 +60,18 @@
 
     // Camera
     camera = new THREE.PerspectiveCamera(60, 1, 0.1, 1000);
-    camera.position.set(gridSize * cellSize / 2, 30, gridSize * cellSize * 0.9);
-    camera.lookAt(gridSize * cellSize / 2, 0, gridSize * cellSize / 2);
+    camera.position.set(gridSize * cellSize / 4, 30, gridSize * cellSize / 2);
+    camera.lookAt(gridSize * cellSize / 4, 0, gridSize * cellSize / 2);
 
     // Renderer
     renderer = new THREE.WebGLRenderer({antialias: true});
     renderer.setSize(600, 600);
     document.getElementById('threejs-canvas').appendChild(renderer.domElement);
+
+    // OrbitControls
+    const controls = new THREE.OrbitControls(camera, renderer.domElement);
+    controls.target.set(gridSize * cellSize / 4, 0, gridSize * cellSize / 2);
+    controls.update();
 
     // Lights
     const ambient = new THREE.AmbientLight(0xffffff, 0.7);
@@ -67,6 +95,27 @@
     raycaster = new THREE.Raycaster();
     mouse = new THREE.Vector2();
 
+    // --- Place initial trees and animals ---
+    function placeInitial(type, count, createFn, arr) {
+      let placed = 0;
+      while (placed < count) {
+        let x = Math.floor(Math.random() * gridSize);
+        let z = Math.floor(Math.random() * gridSize);
+        if (!gridObjects[z][x]) {
+          let mesh = createFn();
+          mesh.position.set(x * cellSize + cellSize/2, 0, z * cellSize + cellSize/2);
+          scene.add(mesh);
+          gridObjects[z][x] = mesh;
+          gridTypes[z][x] = type;
+          arr.push({x, z, mesh});
+          placed++;
+        }
+      }
+    }
+    placeInitial('tree', 8, createTree, treeGrid);
+    placeInitial('animal', 5, createAnimal, animalGrid);
+    animalMeshes = animalGrid.map(a => a.mesh);
+
     // --- Toolbar Logic ---
     document.querySelectorAll('.btn-building').forEach(btn => {
       btn.onclick = () => {
@@ -81,7 +130,7 @@
     });
     document.querySelector('.btn-building[data-type="house"]').classList.add('ring-4', 'ring-cyan-400');
 
-    // --- Place/Remove Objects ---
+    // --- Place/Remove/Action Objects ---
     renderer.domElement.addEventListener('click', (event) => {
       const rect = renderer.domElement.getBoundingClientRect();
       mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
@@ -93,33 +142,74 @@
         const x = Math.floor(point.x / cellSize);
         const z = Math.floor(point.z / cellSize);
         if (x >= 0 && x < gridSize && z >= 0 && z < gridSize) {
-          // Remove old object if present
-          if (gridObjects[z][x]) {
+          // If clicking on tree or animal, show popup
+          if (gridTypes[z][x] === 'tree' || gridTypes[z][x] === 'animal') {
+            selectedCell = {x, z};
+            selectedMesh = gridObjects[z][x];
+            popupType = gridTypes[z][x];
+            showActionPopup(popupType, x, z);
+            return;
+          }
+          // Remove old object if present (except tree/animal, which need popup)
+          if (gridObjects[z][x] && gridTypes[z][x] !== 'tree' && gridTypes[z][x] !== 'animal') {
             scene.remove(gridObjects[z][x]);
             gridObjects[z][x] = null;
+            gridTypes[z][x] = null;
           }
-          // Place new object
-          if (selectedType !== 'clear') {
-            let mesh;
-            if (selectedType === 'house') {
-              mesh = createHouse();
-            } else if (selectedType === 'shop') {
-              mesh = createShop();
-            } else if (selectedType === 'tree') {
-              mesh = createTree();
-            } else if (selectedType === 'animal') {
-              mesh = createAnimal();
-              animalMeshes.push(mesh);
-            }
-            if (mesh) {
-              mesh.position.set(x * cellSize + cellSize/2, 0, z * cellSize + cellSize/2);
-              scene.add(mesh);
-              gridObjects[z][x] = mesh;
+          // Place new object if enough money
+          if (selectedType !== 'clear' && !gridObjects[z][x]) {
+            if (money >= COSTS[selectedType]) {
+              let mesh;
+              if (selectedType === 'house') mesh = createHouse();
+              else if (selectedType === 'shop') mesh = createShop();
+              else if (selectedType === 'tree') mesh = createTree();
+              else if (selectedType === 'animal') mesh = createAnimal();
+              if (mesh) {
+                mesh.position.set(x * cellSize + cellSize/2, 0, z * cellSize + cellSize/2);
+                scene.add(mesh);
+                gridObjects[z][x] = mesh;
+                gridTypes[z][x] = selectedType;
+                if (selectedType === 'animal') animalMeshes.push(mesh);
+                money -= COSTS[selectedType];
+                updateMoney();
+              }
+            } else {
+              alert("Not enough money!");
             }
           }
         }
       }
     });
+
+    // --- Action Popup Logic ---
+    function showActionPopup(type, x, z) {
+      const popup = document.getElementById('action-popup');
+      const label = document.getElementById('action-label');
+      const confirm = document.getElementById('action-confirm');
+      popup.classList.remove('hidden');
+      if (type === 'tree') {
+        label.textContent = "Cut this tree for $" + REWARDS.tree + "?";
+        confirm.textContent = "Cut";
+      } else if (type === 'animal') {
+        label.textContent = "Hunt this animal for $" + REWARDS.animal + "?";
+        confirm.textContent = "Hunt";
+      }
+      confirm.onclick = () => {
+        // Remove mesh and update state
+        scene.remove(selectedMesh);
+        gridObjects[z][x] = null;
+        gridTypes[z][x] = null;
+        if (type === 'animal') {
+          animalMeshes = animalMeshes.filter(m => m !== selectedMesh);
+        }
+        money += REWARDS[type];
+        updateMoney();
+        popup.classList.add('hidden');
+      };
+      document.getElementById('action-cancel').onclick = () => {
+        popup.classList.add('hidden');
+      };
+    }
 
     // --- 3D Models ---
     function createHouse() {
@@ -195,6 +285,11 @@
         mesh.position.x += Math.sin(Date.now() * 0.001 + mesh.position.z) * 0.01;
         mesh.position.z += Math.cos(Date.now() * 0.001 + mesh.position.x) * 0.01;
       });
+    }
+
+    // --- Money UI ---
+    function updateMoney() {
+      document.getElementById('money').textContent = money;
     }
 
     // --- Render Loop ---
